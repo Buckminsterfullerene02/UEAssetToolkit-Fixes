@@ -93,14 +93,21 @@ bool UAnimSequenceGenerator::SetupFbxImportSettings(UFbxImportUI* ImportUI) cons
 	}
 
 	ImportUI->AnimSequenceImportData = NewObject<UFbxAnimSequenceImportData>(ImportUI, NAME_None, RF_NoFlags);
-	ImportUI->AnimSequenceImportData->bRemoveRedundantKeys = true;
 	
 	int32 NumFrames = GetAssetData()->GetObjectField(TEXT("AssetObjectData"))->GetIntegerField(TEXT("NumFrames"));
 	ImportUI->AnimSequenceImportData->AnimationLength = FBXALIT_SetRange;
-
-	const bool LowFrameWarning = NumFrames <= 2;
-
+	
+	ImportUI->AnimSequenceImportData->bRemoveRedundantKeys = true;
 	ImportUI->AnimSequenceImportData->bUseDefaultSampleRate = false;
+	
+	ImportUI->AnimSequenceImportData->FrameImportRange = FInt32Interval(0, NumFrames - 1);
+	UE_LOG(LogAssetGenerator, Log, TEXT("NumFrames: %d"), NumFrames);
+
+	if (NumFrames <= 2)
+	{
+		UE_LOG(LogAssetGenerator, Warning, TEXT("Animation %s has low frame count!"), *GetPackageName().ToString());
+		ImportUI->AnimSequenceImportData->FrameImportRange = FInt32Interval(0, NumFrames);
+	}
 
 	double RateScale = GetAssetData()->GetObjectField(TEXT("AssetObjectData"))->GetNumberField(TEXT("RateScale"));
 	if (RateScale == 0) RateScale = 1;
@@ -122,10 +129,7 @@ bool UAnimSequenceGenerator::SetupFbxImportSettings(UFbxImportUI* ImportUI) cons
 		UE_LOG(LogAssetGenerator, Log, TEXT("CustomSampleRate: %d"), CustomSampleRate);
 	}
 
-	UE_LOG(LogAssetGenerator, Log, TEXT("NumFrames: %d"), NumFrames);
-	ImportUI->AnimSequenceImportData->FrameImportRange = FInt32Interval(0, NumFrames - 1);
-
-	return LowFrameWarning;
+	return NumFrames <= 2;
 }
 
 void UAnimSequenceGenerator::PopulateAnimationProperties(UAnimSequence* Asset) {
